@@ -11,10 +11,14 @@ import java.sql.*;
  * @author 49876
  */
 public class connctDB extends javax.swing.JFrame {
-    String results = "";
-    String metadata="";
-    String[] tables;
-    String[] rows;
+    private String results = "";
+    private String metadata="";
+    private String[] tables = new String[10];
+    private String[] rows;
+    private String conditions;
+    private String selectedTable;
+    private String command;
+    private String order_command;
     /**
      * Creates new form connctDB
      */
@@ -23,25 +27,27 @@ public class connctDB extends javax.swing.JFrame {
     public connctDB() {
         initComponents();
         tables_selections.setSelectedItem(null);
-
+        tables[0] = "art_work";
+        order_selections.addItem("");
+        
+        order_selections.addItem("ASC");
+        order_selections.addItem("DEC");
 		int a;
-		String command = "select * from art_work";
-                
-		
+
 		//loop through the db
 		try{  
 			Class.forName("com.mysql.jdbc.Driver");  
 			Connection con=DriverManager.getConnection(  
 			"jdbc:mysql://localhost:3307/gallery?useSSL=false","root","49876aa");  
 			Statement stmt=con.createStatement();  
-			ResultSet rs=stmt.executeQuery(command);  
-			while(rs.next())  
-			results += rs.getString(1)+","+rs.getString(2)+
-			","+rs.getString(3)+","+rs.getString(4)+","+rs.getString(5)+"\n";  
+			ResultSet rs=stmt.executeQuery("show tables");  
+			while(rs.next())  {
+                            tables_selections.addItem(rs.getString(1));
+                        }
+                        
 			con.close();  
-			}catch(Exception e){ System.out.println(e);}  
-                
-                result.setText(results);
+			}catch(Exception e){ result.setText("from constructor"+e.toString());}  
+
     } 
         
     
@@ -64,6 +70,7 @@ public class connctDB extends javax.swing.JFrame {
         condition = new javax.swing.JTextField();
         jScrollPane1 = new javax.swing.JScrollPane();
         result = new javax.swing.JTextArea();
+        attributes_selections = new javax.swing.JComboBox<>();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -74,11 +81,33 @@ public class connctDB extends javax.swing.JFrame {
             }
         });
 
+        tables_selections.addFocusListener(new java.awt.event.FocusAdapter() {
+            public void focusLost(java.awt.event.FocusEvent evt) {
+                tables_selectionsFocusLost(evt);
+            }
+        });
+        tables_selections.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                tables_selectionsMouseClicked(evt);
+            }
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                tables_selectionsMousePressed(evt);
+            }
+            public void mouseReleased(java.awt.event.MouseEvent evt) {
+                tables_selectionsMouseReleased(evt);
+            }
+        });
+        tables_selections.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                tables_selectionsActionPerformed(evt);
+            }
+        });
+
         jLabel1.setText("Tables");
 
         jLabel2.setText("Order");
 
-        jLabel3.setText("Search");
+        jLabel3.setText("Where");
 
         condition.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -91,52 +120,65 @@ public class connctDB extends javax.swing.JFrame {
         result.setText("Result will be shown in here");
         jScrollPane1.setViewportView(result);
 
+        attributes_selections.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseReleased(java.awt.event.MouseEvent evt) {
+                attributes_selectionsMouseReleased(evt);
+            }
+        });
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addGap(45, 45, 45)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(submit)
-                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addGroup(layout.createSequentialGroup()
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                        .addComponent(submit)
+                        .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
                             .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 74, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addGap(44, 44, 44)
-                            .addComponent(tables_selections, javax.swing.GroupLayout.PREFERRED_SIZE, 192, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addGroup(layout.createSequentialGroup()
-                            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 74, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 74, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addGap(44, 44, 44)
-                            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                .addComponent(order_selections, 0, 192, Short.MAX_VALUE)
-                                .addComponent(condition)))))
-                .addGap(135, 135, 135)
+                            .addComponent(tables_selections, javax.swing.GroupLayout.PREFERRED_SIZE, 192, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 74, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 74, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGap(44, 44, 44)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(condition)
+                            .addComponent(attributes_selections, 0, 192, Short.MAX_VALUE))
+                        .addGap(33, 33, 33)
+                        .addComponent(order_selections, javax.swing.GroupLayout.PREFERRED_SIZE, 192, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 35, Short.MAX_VALUE)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 368, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(34, Short.MAX_VALUE))
+                .addContainerGap(66, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addGap(61, 61, 61)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                    .addComponent(jScrollPane1)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 458, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                             .addComponent(jLabel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addComponent(tables_selections, javax.swing.GroupLayout.DEFAULT_SIZE, 61, Short.MAX_VALUE))
-                        .addGap(61, 61, 61)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                            .addComponent(jLabel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(order_selections, javax.swing.GroupLayout.DEFAULT_SIZE, 61, Short.MAX_VALUE))
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(layout.createSequentialGroup()
+                                .addGap(61, 61, 61)
+                                .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 61, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(layout.createSequentialGroup()
+                                .addGap(61, 61, 61)
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                    .addComponent(order_selections, javax.swing.GroupLayout.PREFERRED_SIZE, 61, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(attributes_selections, javax.swing.GroupLayout.PREFERRED_SIZE, 61, javax.swing.GroupLayout.PREFERRED_SIZE))))
                         .addGap(61, 61, 61)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                             .addComponent(condition)
                             .addComponent(jLabel3, javax.swing.GroupLayout.DEFAULT_SIZE, 61, Short.MAX_VALUE))
                         .addGap(38, 38, 38)
                         .addComponent(submit)))
-                .addContainerGap(47, Short.MAX_VALUE))
+                .addContainerGap(86, Short.MAX_VALUE))
         );
 
         pack();
@@ -144,11 +186,91 @@ public class connctDB extends javax.swing.JFrame {
 
     private void submitActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_submitActionPerformed
         // TODO add your handling code here:
+       
+        selectedTable = String.valueOf(tables_selections.getSelectedItem());
+        conditions = condition.getText();
+        String attributes = String.valueOf(attributes_selections.getSelectedItem());
+        String order = String.valueOf(order_selections.getSelectedItem());
+        order_command = attributes + " " + order;
+        if(order != "" || attributes != ""){
+            command = "select * from " + selectedTable + " order by " + order_command;
+        }
+        else if(order == "" && attributes == "")
+        {
+            command = "select * from " + selectedTable;
+        }
+        try{  
+			Class.forName("com.mysql.jdbc.Driver");  
+			Connection con=DriverManager.getConnection(  
+			"jdbc:mysql://localhost:3307/gallery?useSSL=false","root","49876aa");  
+			Statement stmt=con.createStatement();  
+			ResultSet rs=stmt.executeQuery(command);  
+                        //get number of columns
+                        ResultSetMetaData rsmd = rs.getMetaData();
+                        int columnsNumber = rsmd.getColumnCount();
+			while(rs.next())  {
+                             for(int i = 1; i <= columnsNumber; i++ )
+                             {
+                                 results += rs.getString(i) + ", ";
+                             }
+                             results += "\n"; 
+                        }
+                        results += "\n";
+                        
+			con.close();  
+			}catch(Exception e){ result.setText("from submit"+e.toString());}  
+                        result.setText(results);
     }//GEN-LAST:event_submitActionPerformed
 
     private void conditionActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_conditionActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_conditionActionPerformed
+
+    private void tables_selectionsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_tables_selectionsActionPerformed
+        // TODO add your handling code here:
+                         try{  
+                        attributes_selections.removeAllItems();
+                        attributes_selections.addItem("");
+                        selectedTable = String.valueOf(tables_selections.getSelectedItem());
+			Class.forName("com.mysql.jdbc.Driver");  
+			Connection con=DriverManager.getConnection(  
+			"jdbc:mysql://localhost:3307/gallery?useSSL=false","root","49876aa");  
+			Statement stmt=con.createStatement();  
+			ResultSet rs=stmt.executeQuery("select * from " + selectedTable);  
+                        //get number of columns
+                        ResultSetMetaData rsmd = rs.getMetaData();
+                        int columnsNumber = rsmd.getColumnCount();
+                        for(int i = 1; i <= columnsNumber; i++ )
+                        {
+                           attributes_selections.addItem(rsmd.getColumnName(i));
+                        }
+			con.close();  
+			}catch(Exception e){System.out.println(e);}  
+    }//GEN-LAST:event_tables_selectionsActionPerformed
+
+    private void tables_selectionsMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_tables_selectionsMouseClicked
+        // TODO add your handling code here:
+       
+     
+    }//GEN-LAST:event_tables_selectionsMouseClicked
+
+    private void attributes_selectionsMouseReleased(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_attributes_selectionsMouseReleased
+        // TODO add your handling code here:
+       
+    }//GEN-LAST:event_attributes_selectionsMouseReleased
+
+    private void tables_selectionsMouseReleased(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_tables_selectionsMouseReleased
+        // TODO add your handling code here:
+         
+    }//GEN-LAST:event_tables_selectionsMouseReleased
+
+    private void tables_selectionsMousePressed(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_tables_selectionsMousePressed
+       
+    }//GEN-LAST:event_tables_selectionsMousePressed
+
+    private void tables_selectionsFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_tables_selectionsFocusLost
+
+    }//GEN-LAST:event_tables_selectionsFocusLost
 
     /**
      * @param args the command line arguments
@@ -188,6 +310,7 @@ public class connctDB extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JComboBox<String> attributes_selections;
     private javax.swing.JTextField condition;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
